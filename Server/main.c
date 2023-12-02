@@ -3,6 +3,7 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
+#include <fcntl.h>
 
 #include <string.h>
 #include <unistd.h>
@@ -30,7 +31,7 @@ int main( int argc, char *argv[] ) {
     address.sin_port = htons( PORT ); 
 
     char buffer[BUFFER_SIZE];
-
+    memset(buffer, '\0', BUFFER_SIZE);
 
     if (bind(server_fd, (struct sockaddr *) &address , sizeof(address)) < 0)
     {
@@ -68,10 +69,12 @@ int main( int argc, char *argv[] ) {
             printf("Connection with %d has been established and delegated to the process %d.\nWaiting for a query...\n", client_fd, getpid());
 
             last_operation = clock();
+            int flags = fcntl(client_fd, F_GETFL, 0);
+            fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
             while (1) {
                 int bytesRead = read(client_fd, buffer, BUFFER_SIZE);
-                printf("buffer= %s\n",buffer);
+                // printf("buffer= %s\n",buffer);
                 //to be changed
                 if (strcmp(buffer ,"close\r\n")==0) {
                     printf("Process %d: \n", getpid());
@@ -79,7 +82,7 @@ int main( int argc, char *argv[] ) {
                     printf("Closing session with %d. Bye!\n", client_fd);
                     break;
                 }
-                else if (bytesRead == 0) {
+                else if (bytesRead <= 0) {
                     clock_t d = clock() - last_operation;
                     double dif = 1.0 * d / CLOCKS_PER_SEC;
 
@@ -95,30 +98,19 @@ int main( int argc, char *argv[] ) {
                 else {
                     //buffer[bytesRead] = '\0';  
 
-                    for(int i=0;i<bytesRead;i++){
-                        if(buffer[i]=='\r') printf("byte %d:\\r \n ", i);
-                        else if(buffer[i]=='\n') printf("byte %d:\\n \n ", i);
-                        else printf("byte %d:%c\n ", i,buffer[i]);
-                    }
                     printf("Process %d: \n", getpid());
                     printf("Received %s. Processing... \n", buffer);
                     fflush(stdout);
-
                     memset(response, '\0', RESPONSE_SIZE);
-
                     //todo create the appropriate response
-                    strcpy(response,"heree\r\n");
-
+                    strcpy(response,buffer);
                     memset(buffer, '\0', BUFFER_SIZE);
-
                     send(client_fd, response, strlen(response), 0);
-                    
-                    //printf("Responded with %s. Waiting for a new query...\n", response);
-                    printf("befor clock\n");
+                    printf("Responded with %s. Waiting for a new query...\n", response);
+                    fflush(stdout);
                     last_operation = clock();
-                    printf("after clock\n");
+                    
                 }
-                printf("after else\n");
             }
             
             exit(0);
