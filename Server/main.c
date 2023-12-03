@@ -17,7 +17,7 @@
 void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
     char file_path[256];
-    sscanf(request, "GET %s HTTP/1.1\r\n\r\n", file_path);
+    sscanf(request, "GET %s HTTP/1.1\r\n", file_path);
     printf("-------------------------------------------------------------\n");
     printf("I am in handle_get_request and the file path is %s\n", file_path);
 
@@ -26,7 +26,7 @@ void handle_get_request(int client_fd, const char* request) {
     if (file == NULL) {
         // If the file is not found, send a 404 Not Found response
         char response[RESPONSE_SIZE];
-        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 404 Not Found\r\nFile not found\n");
+        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 404 Not Found\r\n");
         send(client_fd, response, strlen(response), 0);
         return;
     }
@@ -37,17 +37,24 @@ void handle_get_request(int client_fd, const char* request) {
     snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n"); // \n
        
     // Process optional headers (skip the request line and the mandatory Host header)
-    char* header_start = strstr(request, "\r\n") + 2;  // Move past the first \r\n after the request line
-    while (strncmp(header_start, "\r\n", 2) != 0) {
+    const char *headers_start = strstr(request, "\r\n") + 2; /// Move to the start of headers
+    char headers_copy[BUFFER_SIZE];
+    strncpy(headers_copy, headers_start, sizeof(headers_copy));
+    headers_copy[sizeof(headers_copy) - 1] = '\0';
+
+    // Parse optional headers
+    char *header_line = strtok(headers_copy, "\r\n");    
+    while (header_line != NULL) {
         // Extract and process each header line
         char header[512];
-        sscanf(header_start, "%s\r\n", header);
+        sscanf(header_line, "%s\r\n", header);
         strcat(response, header);
         strcat(response, "\r\n");
         printf("In header while\n");
         printf("header = %s\n", header);
         printf("response = %s\n", response);
-        header_start = strstr(header_start + 2, "\r\n") + 2;  // Move to the next header
+        header_line = strtok(NULL, "\r\n");
+        printf("header_line = %s\n", header_line);
     }
 
     // End the headers
