@@ -17,6 +17,8 @@
 void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
     char file_path[256];
+    // TODO: img - txt - html
+
     sscanf(request, "GET %s HTTP/1.1\r\n", file_path);
     printf("-------------------------------------------------------------\n");
     printf("I am in handle_get_request and the file path is %s\n", file_path);
@@ -47,7 +49,7 @@ void handle_get_request(int client_fd, const char* request) {
     while (header_line != NULL) {
         // Extract and process each header line
         char header[512];
-        sscanf(header_line, "%s\r\n", header);
+        sscanf(header_line, "%511[^\r\n]\r\n", header);
         strcat(response, header);
         strcat(response, "\r\n");
         printf("In header while\n");
@@ -80,12 +82,21 @@ void handle_get_request(int client_fd, const char* request) {
     fclose(file);
 }
 
+
 void handle_post_request(int client_fd, const char* request) {
+    // Extract the requested file path from the request
+    char file_path[256];
+
+    // TODO: img - txt - html
+    sscanf(request, "POST %s HTTP/1.1\r\n", file_path);
+    printf("-------------------------------------------------------------\n");
+    printf("I am in handle_post_request and the file path is %s\n", file_path);
+
     // Extract the data from the request body
     const char* body_start = strstr(request, "\r\n\r\n");
     if (body_start == NULL) {
         char response[RESPONSE_SIZE];
-        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n\r\nInvalid request\n");
+        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n");
         send(client_fd, response, strlen(response), 0);
         return;
     }
@@ -93,9 +104,26 @@ void handle_post_request(int client_fd, const char* request) {
     const char* data = body_start + 4;  // Skip the "\r\n\r\n"
     printf("Received POST data: %s\n", data);
 
+    FILE *file = fopen(file_path, "a");
+    if (file == NULL) {
+        // If the file is not found, send a 404 Not Found response
+        char response[RESPONSE_SIZE];
+        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 404 Not Found\r\n");
+        send(client_fd, response, strlen(response), 0);
+        return;
+    }
+
+    // Append data to the file
+    fputs(data, file);
+
+    // Close the file
+    fclose(file);
+
     // Create a response
     char response[RESPONSE_SIZE];
-    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n\r\nReceived POST data: %s", data);
+    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n");
+
+    // TODO: Handle the optional headers
 
     // Send the response
     send(client_fd, response, strlen(response), 0);
@@ -193,9 +221,9 @@ int main( int argc, char *argv[] ) {
                     if (strncmp(buffer, "GET", 3) == 0) {
                         handle_get_request(client_fd, buffer);
                     }
-                    // else if (strncmp(buffer, "POST", 4) == 0) {
-                    //     handle_post_request(client_fd, buffer);
-                    // }
+                    else if (strncmp(buffer, "POST", 4) == 0) {
+                        handle_post_request(client_fd, buffer);
+                    }
                     else {
                         // Invalid request
                         char response[RESPONSE_SIZE];
