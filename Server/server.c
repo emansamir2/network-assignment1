@@ -188,7 +188,7 @@ int main( int argc, char *argv[] ) {
             fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
             while (1) {
-                int bytesRead = read(client_fd, buffer, BUFFER_SIZE);
+                int bytesRead = recv(client_fd, buffer, BUFFER_SIZE,0);
                 // printf("buffer= %s\n",buffer);
                 //to be changed
                 if (strcmp(buffer ,"close\r\n") == 0) {
