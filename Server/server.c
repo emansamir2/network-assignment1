@@ -66,18 +66,23 @@ void handle_get_request(int client_fd, const char* request) {
     // Send the file content in chunks
     size_t LOCAL_BUFFER_SIZE = RESPONSE_SIZE - final_response_size;
     char buffer[LOCAL_BUFFER_SIZE];
-    
-    char header_response[RESPONSE_SIZE];
-    strcpy(header_response, response);
+
     size_t bytes_read;
-    while ((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0) {
-        // send(client_fd, buffer, bytes_read, 0);
-        // add the header files before sending the response each time
-        strcpy(response, header_response);
+    if((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0){
         strcat(response, buffer);
-        printf("In while sending response = %s\n", response);
         send(client_fd, response, strlen(response), 0);
     }
+    // char header_response[RESPONSE_SIZE];
+    // strcpy(header_response, response);
+    // size_t bytes_read;
+    // while ((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0) {
+    //     // send(client_fd, buffer, bytes_read, 0);
+    //     // add the header files before sending the response each time
+    //     strcpy(response, header_response);
+    //     strcat(response, buffer);
+    //     printf("In while sending response = %s\n", response);
+    //     send(client_fd, response, strlen(response), 0);
+    // }
     
     fclose(file);
 }
