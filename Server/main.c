@@ -11,9 +11,88 @@
 #include <time.h>
 
 #define PORT 8888  
-#define BUFFER_SIZE 8  
-#define RESPONSE_SIZE 8 
+#define BUFFER_SIZE 1024  
+#define RESPONSE_SIZE 1024
 
+void handle_get_request(int client_fd, const char* request) {
+    // Extract the requested file path from the request
+    char file_path[256];
+    sscanf(request, "GET %s HTTP/1.1\r\n\r\n", file_path);
+    printf("-------------------------------------------------------------\n");
+    printf("I am in handle_get_request and the file path is %s\n", file_path);
+
+    // Open the requested file
+    FILE* file = fopen(file_path, "r");
+    if (file == NULL) {
+        // If the file is not found, send a 404 Not Found response
+        char response[RESPONSE_SIZE];
+        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 404 Not Found\r\nFile not found\n");
+        send(client_fd, response, strlen(response), 0);
+        return;
+    }
+
+
+    // Send the file content as the response
+    char response[RESPONSE_SIZE];
+    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n"); // \n
+       
+    // Process optional headers (skip the request line and the mandatory Host header)
+    char* header_start = strstr(request, "\r\n") + 2;  // Move past the first \r\n after the request line
+    while (strncmp(header_start, "\r\n", 2) != 0) {
+        // Extract and process each header line
+        char header[512];
+        sscanf(header_start, "%s\r\n", header);
+        strcat(response, header);
+        strcat(response, "\r\n");
+        printf("In header while\n");
+        printf("header = %s\n", header);
+        printf("response = %s\n", response);
+        header_start = strstr(header_start + 2, "\r\n") + 2;  // Move to the next header
+    }
+
+    // End the headers
+    strcat(response, "\r\n");
+    printf("Response now = %s\n", response);
+    size_t final_response_size = strlen(response);
+    // Send the file content in chunks
+    size_t LOCAL_BUFFER_SIZE = RESPONSE_SIZE - final_response_size;
+    char buffer[LOCAL_BUFFER_SIZE];
+    
+    char header_response[RESPONSE_SIZE];
+    strcpy(header_response, response);
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0) {
+        // send(client_fd, buffer, bytes_read, 0);
+        // add the header files before sending the response each time
+        strcpy(response, header_response);
+        strcat(response, buffer);
+        printf("In while sending response = %s\n", response);
+        send(client_fd, response, strlen(response), 0);
+    }
+    
+    fclose(file);
+}
+
+void handle_post_request(int client_fd, const char* request) {
+    // Extract the data from the request body
+    const char* body_start = strstr(request, "\r\n\r\n");
+    if (body_start == NULL) {
+        char response[RESPONSE_SIZE];
+        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n\r\nInvalid request\n");
+        send(client_fd, response, strlen(response), 0);
+        return;
+    }
+
+    const char* data = body_start + 4;  // Skip the "\r\n\r\n"
+    printf("Received POST data: %s\n", data);
+
+    // Create a response
+    char response[RESPONSE_SIZE];
+    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n\r\nReceived POST data: %s", data);
+
+    // Send the response
+    send(client_fd, response, strlen(response), 0);
+}
 
 
 int main( int argc, char *argv[] ) {
@@ -68,6 +147,7 @@ int main( int argc, char *argv[] ) {
 
             printf("Connection with %d has been established and delegated to the process %d.\nWaiting for a query...\n", client_fd, getpid());
 
+            // to make the client_fd not blocking
             last_operation = clock();
             int flags = fcntl(client_fd, F_GETFL, 0);
             fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
@@ -76,7 +156,7 @@ int main( int argc, char *argv[] ) {
                 int bytesRead = read(client_fd, buffer, BUFFER_SIZE);
                 // printf("buffer= %s\n",buffer);
                 //to be changed
-                if (strcmp(buffer ,"close\r\n")==0) {
+                if (strcmp(buffer ,"close\r\n") == 0) {
                     printf("Process %d: \n", getpid());
                     close(client_fd);
                     printf("Closing session with %d. Bye!\n", client_fd);
@@ -86,7 +166,7 @@ int main( int argc, char *argv[] ) {
                     clock_t d = clock() - last_operation;
                     double dif = 1.0 * d / CLOCKS_PER_SEC;
 
-                    if (dif > 5.0) {
+                    if (dif > 30.0) {
                         printf("Process %d: \n", getpid());
                         close(client_fd);
                         printf("Connection timed out after %.3lf seconds. \n", dif);
@@ -102,13 +182,30 @@ int main( int argc, char *argv[] ) {
                     printf("Received %s. Processing... \n", buffer);
                     fflush(stdout);
                     memset(response, '\0', RESPONSE_SIZE);
-                    //todo create the appropriate response
-                    strcpy(response,buffer);
+                    // Check if it's a GET or POST request
+                    if (strncmp(buffer, "GET", 3) == 0) {
+                        handle_get_request(client_fd, buffer);
+                    }
+                    // else if (strncmp(buffer, "POST", 4) == 0) {
+                    //     handle_post_request(client_fd, buffer);
+                    // }
+                    else {
+                        // Invalid request
+                        char response[RESPONSE_SIZE];
+                        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n\r\nInvalid request\n");
+                        send(client_fd, response, strlen(response), 0);
+                    }
+
                     memset(buffer, '\0', BUFFER_SIZE);
-                    send(client_fd, response, strlen(response), 0);
-                    printf("Responded with %s. Waiting for a new query...\n", response);
-                    fflush(stdout);
                     last_operation = clock();
+
+                    // //todo create the appropriate response
+                    // strcpy(response,buffer);
+                    // memset(buffer, '\0', BUFFER_SIZE);
+                    // send(client_fd, response, strlen(response), 0);
+                    // printf("Responded with %s. Waiting for a new query...\n", response);
+                    // fflush(stdout);
+                    // last_operation = clock();
                     
                 }
             }
