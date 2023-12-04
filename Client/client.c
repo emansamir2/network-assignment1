@@ -10,7 +10,9 @@
 
 #define BUFFER_SIZE 1024  
 #define RESPONSE_SIZE 1024
-#define LOCALHOST "/home/eman/Documents/network-assignment1"
+#define LOCALHOST "/home/maria/Documents/Networks/network-assignment1"
+// #define LOCALHOST "/home/eman/Documents/network-assignment1"
+
 
 void extract_filename(const char *file_path, char *filename) {
     const char *last_slash = strrchr(file_path, '/');
@@ -97,19 +99,20 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
 }
 
 void client_post(int client_fd, char file_path[],char host_name [],char port_number []){
-    
+    printf("I am in client post\n");
     char request[BUFFER_SIZE];
     char filename[256];
     extract_filename(file_path, filename);
     char output_file_path [256];
     snprintf(output_file_path, sizeof(output_file_path), "%s/Server/%s", LOCALHOST, filename);
+    // Build the POST request
     snprintf(request, sizeof(request), "POST %s HTTP/1.1\r\n", output_file_path);
     strcat(request,"Accept-Language: en-us\r\n");
     strcat(request,"Connection: keep-alive\r\n\r\n");
     //body
     char buffer[BUFFER_SIZE];
     memset(buffer, '\0', BUFFER_SIZE);
-    FILE *file = fopen(file_path, "r");
+    FILE *file = fopen(file_path, "rb");
     if (file == NULL) {
         perror("ERROR opening file");
         exit(1);
@@ -137,7 +140,8 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 
     printf("%s\n", response);
 
-    if(strcmp(response, "HTTP/1.1 200 OK\r\n") == 0){
+    const char *expected_pattern = "HTTP/1.1 200 OK";
+    if(strncmp(response, expected_pattern, strlen(expected_pattern)) == 0){
         if (remove(file_path) == 0) {
         printf("File deleted successfully from client.\n");
     } else {

@@ -250,13 +250,12 @@ int main( int argc, char *argv[] ) {
                     else {
                         // Invalid request
                         char response[RESPONSE_SIZE];
-                        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n\r\nInvalid request\n");
+                        snprintf(response, RESPONSE_SIZE, "HTTP/1.1 400 Bad Request\r\n"); // \r\nInvalid request
                         send(client_fd, response, strlen(response), 0);
                     }
 
                     memset(buffer, '\0', BUFFER_SIZE);
                     last_operation = clock();
-                    
                 }
             }
             close(client_fd);
