@@ -8,10 +8,10 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define BUFFER_SIZE 1024  
-#define RESPONSE_SIZE 1024
-#define LOCALHOST "/home/maria/Documents/Networks/network-assignment1"
-// #define LOCALHOST "/home/eman/Documents/network-assignment1"
+#define BUFFER_SIZE 1000000  
+#define RESPONSE_SIZE 1000000
+#define LOCALHOST "/home/eman/Documents/network-assignment1"
+// #define LOCALHOST ""
 
 
 void extract_filename(const char *file_path, char *filename) {
@@ -65,7 +65,7 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
     bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-    buffer[bytes_received] = '\0';
+    // buffer[bytes_received] = '\0';
 
     printf("%s\n\n", buffer);
 
@@ -83,7 +83,7 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
         // Print or process the received data (excluding headers)
         // printf("%s", body_start);
     
-        FILE *file = fopen(output_file_path, "w");
+        FILE *file = fopen(output_file_path, "wb");
         if (file == NULL) {
             perror("ERROR opening file");
             exit(1);
@@ -118,13 +118,20 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
         exit(1);
     }
     // Write the received data to the file
-    fread(buffer, sizeof(char), BUFFER_SIZE, file);
-
+    memset(buffer,'\0',BUFFER_SIZE);
+    size_t bytesRead = fread(buffer, 1, BUFFER_SIZE, file);
+    printf("bytesRead fread  %zu\n",bytesRead);
+    
+    printf("\n");
     // Close the file
     fclose(file);
-
-    strcat(request,buffer);
-    ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
+    size_t requestLength = strlen(request);
+    memcpy(request + requestLength, buffer, bytesRead);
+    for (size_t i = 0; i < 1600; ++i) {
+        printf("%02X ", (unsigned char)request[i]);
+    }
+    ssize_t sent_Bytes= send(client_fd, request, requestLength + bytesRead, 0);
+    printf("sent bytes %zu\n",sent_Bytes);
     if(sent_Bytes<=0){
         perror("ERROR while sending to socket");
         exit(1);
@@ -132,6 +139,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 
     char response[RESPONSE_SIZE];
     ssize_t bytes_received = recv(client_fd, response, sizeof(buffer) - 1, 0);
+    printf("recived bytes %zu \n",bytes_received);
     if(bytes_received<0){
         perror("ERROR while receiving to socket");
         exit(1);
@@ -156,13 +164,13 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 
 int main( int argc, char *argv[] ) {
 
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s server_ip port_number\n", argv[0]);
-        return EXIT_FAILURE;
-    }
+    // if (argc != 3) {
+    //     fprintf(stderr, "Usage: %s server_ip port_number\n", argv[0]);
+    //     return EXIT_FAILURE;
+    // }
 
-    char *server_ip = argv[1];
-    char *port_n = argv[2];
+    char *server_ip = "10.0.2.15";
+    char *port_n = "8888";
 
     FILE *input_file = fopen("commands.txt", "r"); // Open the input file
 

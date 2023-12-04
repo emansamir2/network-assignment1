@@ -9,8 +9,8 @@
 #include <time.h>
 
 #define PORT 8888 //not used now 
-#define BUFFER_SIZE 1024  
-#define RESPONSE_SIZE 1024
+#define BUFFER_SIZE 1000000  
+#define RESPONSE_SIZE 1000000 
 
 void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
@@ -22,7 +22,7 @@ void handle_get_request(int client_fd, const char* request) {
     printf("I am in handle_get_request and the file path is %s\n", file_path);
 
     // Open the requested file
-    FILE* file = fopen(file_path, "r");
+    FILE* file = fopen(file_path, "rb");
     if (file == NULL) {
         // If the file is not found, send a 404 Not Found response
         char response[RESPONSE_SIZE];
@@ -66,9 +66,21 @@ void handle_get_request(int client_fd, const char* request) {
     char buffer[LOCAL_BUFFER_SIZE];
 
     size_t bytes_read;
-    if((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0){
-        strcat(response, buffer);
-        send(client_fd, response, strlen(response), 0);
+    if((bytes_read = fread(buffer, 1, LOCAL_BUFFER_SIZE, file)) > 0){
+        size_t response_length = strlen(response);
+
+        // Use memcpy to concatenate buffer to the response
+        memcpy(response + response_length, buffer, bytes_read);
+
+        // Update the response length
+        response_length += bytes_read;
+
+        // Send the updated response to the client
+        ssize_t sent_Bytes= send(client_fd, response, response_length, 0);
+        printf("sent bytes %zu\n",sent_Bytes);
+        for (size_t i = 0; i < sent_Bytes; ++i) {
+        printf("%02X ", (unsigned char)response[i]);
+    }
     }
     // char header_response[RESPONSE_SIZE];
     // strcpy(header_response, response);
@@ -107,7 +119,7 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     const char* data = body_start + 4;  // Skip the "\r\n\r\n"
     printf("Received POST data: %s\n", data);
 
-    FILE *file = fopen(file_path, "w");//
+    FILE *file = fopen(file_path, "wb");//
     if (file == NULL) {
         // If the file is not found, send a 404 Not Found response
         char response[RESPONSE_SIZE];
@@ -148,12 +160,12 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
 
 int main( int argc, char *argv[] ) {
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s port_number\n", argv[0]);
-        return EXIT_FAILURE;
-    }
+    // if (argc != 2) {
+    //     fprintf(stderr, "Usage: %s port_number\n", argv[0]);
+    //     return EXIT_FAILURE;
+    // }
 
-    char *port_number = argv[1];
+    char *port_number ="8888";
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if( server_fd == 0)   
@@ -212,6 +224,7 @@ int main( int argc, char *argv[] ) {
 
             while (1) {
                 ssize_t bytesRead = recv(client_fd, buffer, BUFFER_SIZE,0);
+                
                 // printf("buffer= %s\n",buffer);
                 //to be changed
                 if (strcmp(buffer ,"close\r\n") == 0) {
@@ -245,6 +258,7 @@ int main( int argc, char *argv[] ) {
                         handle_get_request(client_fd, buffer);
                     }
                     else if (strncmp(buffer, "POST", 4) == 0) {
+                        printf("hereeeeeeeee bytesRead %zu\n\n",bytesRead);
                         handle_post_request(client_fd, buffer,bytesRead);
                     }
                     else {
