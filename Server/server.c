@@ -1,16 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <netdb.h>
 #include <netinet/in.h>
 #include <fcntl.h>
-
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
 
-#define PORT 8888  
+#define PORT 8888 //not used now 
 #define BUFFER_SIZE 1024  
 #define RESPONSE_SIZE 1024
 
@@ -127,7 +125,21 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     char response[RESPONSE_SIZE];
     snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n");
 
-    // TODO: Handle the optional headers
+    const char* header_start = request + strlen("POST") + strlen(file_path) + strlen("HTTP/1.1\r\n") + 2; // Move past the first \r\n after the request line
+    while (strncmp(header_start, "\r\n", 2) != 0) {//not \r\n
+        // Extract and process each header line
+        char header[512];
+        sscanf(header_start, "%511[^\r\n]\r\n", header);
+        printf("Header: %s\n", header);
+        strcat(response, header);
+        strcat(response, "\r\n");
+
+        // Move to the next line
+        header_start = strstr(header_start, "\r\n") + 2;
+    }
+
+    strcat(response, "\r\n");
+    printf("\nresponse: %s\n", response);
 
     // Send the response
     send(client_fd, response, strlen(response), 0);
@@ -135,6 +147,13 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
 
 
 int main( int argc, char *argv[] ) {
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s port_number\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    char *port_number = argv[1];
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if( server_fd == 0)   
@@ -146,7 +165,7 @@ int main( int argc, char *argv[] ) {
     struct sockaddr_in address;
     address.sin_family = AF_INET;   
     address.sin_addr.s_addr = INADDR_ANY;   //htonl(INADDR_ANY)
-    address.sin_port = htons( PORT ); 
+    address.sin_port = htons(atoi(port_number)); 
 
     char buffer[BUFFER_SIZE];
     memset(buffer, '\0', BUFFER_SIZE);
@@ -156,7 +175,7 @@ int main( int argc, char *argv[] ) {
         printf("Error! Bind has failed\n");
         exit(0);
     }
-    printf("Listener on port %d \n", PORT);
+    printf("Listener on port %d \n", atoi(port_number));
 
     if (listen(server_fd, 3) < 0)
     {
@@ -237,22 +256,16 @@ int main( int argc, char *argv[] ) {
 
                     memset(buffer, '\0', BUFFER_SIZE);
                     last_operation = clock();
-
-                    // //todo create the appropriate response
-                    // strcpy(response,buffer);
-                    // memset(buffer, '\0', BUFFER_SIZE);
-                    // send(client_fd, response, strlen(response), 0);
-                    // printf("Responded with %s. Waiting for a new query...\n", response);
-                    // fflush(stdout);
-                    // last_operation = clock();
                     
                 }
             }
-            
+            close(client_fd);
             exit(0);
         }
         else {
             close(client_fd);
         }
     }
+    close(server_fd); // Close the server socket in the parent process
+    return 0;
 }

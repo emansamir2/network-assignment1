@@ -1,20 +1,13 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <stdio.h>
 #include <stdlib.h>
-
-#include <netdb.h>
 #include <netinet/in.h>
 #include <fcntl.h>
-
-#include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
-// #include <curl/curl.h>
+
 #define BUFFER_SIZE 1024  
 #define RESPONSE_SIZE 1024
 #define LOCALHOST "/home/eman/Documents/network-assignment1"
@@ -129,7 +122,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 
     strcat(request,buffer);
     ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
-    if(sent_Bytes<0){
+    if(sent_Bytes<=0){
         perror("ERROR while sending to socket");
         exit(1);
     }
@@ -157,7 +150,16 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 }
 
 
-int main() {
+int main( int argc, char *argv[] ) {
+
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s server_ip port_number\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    char *server_ip = argv[1];
+    char *port_n = argv[2];
+
     FILE *input_file = fopen("commands.txt", "r"); // Open the input file
 
     if (!input_file) {
@@ -177,9 +179,10 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    start_connection(client_fd,"10.0.2.15","8888");
+    start_connection(client_fd,server_ip,port_n);
 
     while (fscanf(input_file, "%s %s %s %s", command, file_path, host_name, port_number) == 4) {
+        //TODO: check if the connection is open
         if (strcmp(command, "client_get") == 0) {
             // Handle GET command
             // file_path --> in the server
