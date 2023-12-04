@@ -1,2 +1,2 @@
 client_get /home/eman/Documents/network-assignment1/Server/Trial1.txt 10.0.2.15 8888
-client_post /home/eman/Documents/network-assignment1/Client/Trial1.txt 10.0.2.15 8888
+client_post /home/eman/Documents/network-assignment1/Client/Trial2.txt 10.0.2.15 8888

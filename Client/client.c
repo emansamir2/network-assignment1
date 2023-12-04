@@ -18,6 +18,7 @@
 #define BUFFER_SIZE 1024  
 #define RESPONSE_SIZE 1024
 #define LOCALHOST "/home/eman/Documents/network-assignment1"
+
 void extract_filename(const char *file_path, char *filename) {
     const char *last_slash = strrchr(file_path, '/');
     
@@ -71,7 +72,7 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
     bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     buffer[bytes_received] = '\0';
 
-    printf("%s", buffer);
+    printf("%s\n\n", buffer);
 
     // Create a file using the file path as the name
     char filename[256];
@@ -85,7 +86,7 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
         body_start += 4;
 
         // Print or process the received data (excluding headers)
-        printf("%s", body_start);
+        // printf("%s", body_start);
     
         FILE *file = fopen(output_file_path, "w");
         if (file == NULL) {
@@ -97,6 +98,59 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
 
         // Close the file
         fclose(file);
+    }
+    
+
+}
+
+void client_post(int client_fd, char file_path[],char host_name [],char port_number []){
+    
+    char request[BUFFER_SIZE];
+    char filename[256];
+    extract_filename(file_path, filename);
+    char output_file_path [256];
+    snprintf(output_file_path, sizeof(output_file_path), "%s/Server/%s", LOCALHOST, filename);
+    snprintf(request, sizeof(request), "POST %s HTTP/1.1\r\n", output_file_path);
+    strcat(request,"Accept-Language: en-us\r\n");
+    strcat(request,"Connection: keep-alive\r\n\r\n");
+    //body
+    char buffer[BUFFER_SIZE];
+    memset(buffer, '\0', BUFFER_SIZE);
+    FILE *file = fopen(file_path, "r");
+    if (file == NULL) {
+        perror("ERROR opening file");
+        exit(1);
+    }
+    // Write the received data to the file
+    fread(buffer, sizeof(char), BUFFER_SIZE, file);
+
+    // Close the file
+    fclose(file);
+
+    strcat(request,buffer);
+    ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
+    if(sent_Bytes<0){
+        perror("ERROR while sending to socket");
+        exit(1);
+    }
+
+    char response[RESPONSE_SIZE];
+    ssize_t bytes_received = recv(client_fd, response, sizeof(buffer) - 1, 0);
+    if(bytes_received<0){
+        perror("ERROR while receiving to socket");
+        exit(1);
+    }
+    response[bytes_received] = '\0';
+
+    printf("%s\n", response);
+
+    if(strcmp(response, "HTTP/1.1 200 OK\r\n") == 0){
+        if (remove(file_path) == 0) {
+        printf("File deleted successfully from client.\n");
+    } else {
+        perror("Error deleting file");
+    }
+
     }
     
 
@@ -130,11 +184,11 @@ int main() {
             // Handle GET command
             // file_path --> in the server
             client_get(client_fd ,file_path, host_name, port_number); // --> create a new file at the client
-        } 
-        // else if (strcmp(command, "client_post") == 0) {
-        //     // Handle POST command
-        //     client_post(file_path, host_name, port_number); // --> send the data to the server
-        // } 
+        }
+        else if (strcmp(command, "client_post") == 0) {
+            // Handle POST command
+            client_post(client_fd ,file_path, host_name, port_number); // --> send the data to the server
+        }
         else {
             fprintf(stderr, "Unknown command: %s\n", command);
         }

@@ -88,7 +88,7 @@ void handle_get_request(int client_fd, const char* request) {
 }
 
 
-void handle_post_request(int client_fd, const char* request) {
+void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) {
     // Extract the requested file path from the request
     char file_path[256];
 
@@ -109,7 +109,7 @@ void handle_post_request(int client_fd, const char* request) {
     const char* data = body_start + 4;  // Skip the "\r\n\r\n"
     printf("Received POST data: %s\n", data);
 
-    FILE *file = fopen(file_path, "a");
+    FILE *file = fopen(file_path, "w");//
     if (file == NULL) {
         // If the file is not found, send a 404 Not Found response
         char response[RESPONSE_SIZE];
@@ -119,8 +119,7 @@ void handle_post_request(int client_fd, const char* request) {
     }
 
     // Append data to the file
-    fputs(data, file);
-
+    fwrite(data, sizeof(char), bytesRead - (data - request), file);
     // Close the file
     fclose(file);
 
@@ -193,7 +192,7 @@ int main( int argc, char *argv[] ) {
             fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
             while (1) {
-                int bytesRead = recv(client_fd, buffer, BUFFER_SIZE,0);
+                ssize_t bytesRead = recv(client_fd, buffer, BUFFER_SIZE,0);
                 // printf("buffer= %s\n",buffer);
                 //to be changed
                 if (strcmp(buffer ,"close\r\n") == 0) {
@@ -227,7 +226,7 @@ int main( int argc, char *argv[] ) {
                         handle_get_request(client_fd, buffer);
                     }
                     else if (strncmp(buffer, "POST", 4) == 0) {
-                        handle_post_request(client_fd, buffer);
+                        handle_post_request(client_fd, buffer,bytesRead);
                     }
                     else {
                         // Invalid request
