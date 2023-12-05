@@ -55,12 +55,12 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
     
     char request[BUFFER_SIZE];
     snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\n", file_path);
-    strcat(request,"Accept-Language: en-us\r\n");
-    strcat(request,"Connection: keep-alive\r\n\r\n");
+    strcat(request,"Accept-Language: en-us\r\n");//to be removed
+    strcat(request,"Connection: keep-alive\r\n\r\n");//to be removed
     ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
     if(sent_Bytes<0){
         perror("ERROR while sending to socket");
-        exit(1);
+        return;//exit(1);
     }
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
@@ -86,7 +86,7 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
         FILE *file = fopen(output_file_path, "wb");
         if (file == NULL) {
             perror("ERROR opening file");
-            exit(1);
+            return;//exit(1);
         }
         // Write the received data to the file
         fwrite(body_start, sizeof(char), bytes_received - (body_start - buffer), file);
@@ -115,7 +115,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     FILE *file = fopen(file_path, "rb");
     if (file == NULL) {
         perror("ERROR opening file");
-        exit(1);
+        return; //exit(1);
     }
     // Write the received data to the file
     memset(buffer,'\0',BUFFER_SIZE);
@@ -134,7 +134,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     printf("sent bytes %zu\n",sent_Bytes);
     if(sent_Bytes<=0){
         perror("ERROR while sending to socket");
-        exit(1);
+        return;//exit(1);
     }
 
     char response[RESPONSE_SIZE];
@@ -142,7 +142,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     printf("recived bytes %zu \n",bytes_received);
     if(bytes_received<0){
         perror("ERROR while receiving to socket");
-        exit(1);
+        return;//exit(1);
     }
     response[bytes_received] = '\0';
 

@@ -7,10 +7,25 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 
 #define PORT 8888 //not used now 
 #define BUFFER_SIZE 1000000  
 #define RESPONSE_SIZE 1000000 
+
+int *activeConnections;  // Global variable to track the number of active connections
+
+void incrementConnections() {
+    // Ensure atomic increment
+    __sync_add_and_fetch(activeConnections, 1);
+}
+
+void decrementConnections() {
+    // Ensure atomic decrement
+    __sync_sub_and_fetch(activeConnections, 1);
+}
+
 
 void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
@@ -160,12 +175,12 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
 
 int main( int argc, char *argv[] ) {
 
-    // if (argc != 2) {
-    //     fprintf(stderr, "Usage: %s port_number\n", argv[0]);
-    //     return EXIT_FAILURE;
-    // }
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s port_number\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    char *port_number ="8888";
+    char *port_number= argv[1];//"8888"
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if( server_fd == 0)   
@@ -196,7 +211,18 @@ int main( int argc, char *argv[] ) {
     }
 
     int addrlen = sizeof(address);   
-    puts("Waiting for connections ..."); 
+    puts("Waiting for connections ...");
+
+    int shm_fd;
+    void *shm_ptr;
+
+    // Create shared memory
+    shm_fd = shm_open("/activeConnections", O_CREAT | O_RDWR, 0666);
+    ftruncate(shm_fd, sizeof(int));
+    shm_ptr = mmap(0, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    activeConnections = (int *)shm_ptr;
+
+    *activeConnections = 0; 
 
     char response[RESPONSE_SIZE];
     time_t last_operation;
@@ -204,6 +230,8 @@ int main( int argc, char *argv[] ) {
 
     while (1) {
         int client_fd = accept(server_fd, (struct sockaddr *) &address, (socklen_t*)&addrlen);
+        incrementConnections();
+        printf("Number of active connections: %d\n", *activeConnections);
 
         pid = fork();
 
@@ -212,6 +240,8 @@ int main( int argc, char *argv[] ) {
 
             if (client_fd < 0) {
                 printf("Error! Can't accept\n");
+                decrementConnections();
+                printf("Number of active connections: %d\n", *activeConnections);
                 exit(0);
             }
 
@@ -229,7 +259,7 @@ int main( int argc, char *argv[] ) {
                 //to be changed
                 if (strcmp(buffer ,"close\r\n") == 0) {
                     printf("Process %d: \n", getpid());
-                    close(client_fd);
+                    //close(client_fd);
                     printf("Closing session with %d. Bye!\n", client_fd);
                     break;
                 }
@@ -237,9 +267,9 @@ int main( int argc, char *argv[] ) {
                     clock_t d = clock() - last_operation;
                     double dif = 1.0 * d / CLOCKS_PER_SEC;
 
-                    if (dif > 30.0) {
+                    if (dif > 30.0 / *activeConnections) {
                         printf("Process %d: \n", getpid());
-                        close(client_fd);
+                        //close(client_fd);
                         printf("Connection timed out after %.3lf seconds. \n", dif);
                         printf("Closing session with %d. Bye!\n", client_fd);
                         break;
@@ -272,6 +302,8 @@ int main( int argc, char *argv[] ) {
                     last_operation = clock();
                 }
             }
+            decrementConnections();
+            printf("Number of active connections: %d\n", *activeConnections);
             close(client_fd);
             exit(0);
         }
@@ -279,6 +311,10 @@ int main( int argc, char *argv[] ) {
             close(client_fd);
         }
     }
-    close(server_fd); // Close the server socket in the parent process
+    
+    munmap(shm_ptr, sizeof(int));
+    close(shm_fd);
+    shm_unlink("/activeConnections");
+    close(server_fd);
     return 0;
 }
