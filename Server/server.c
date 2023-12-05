@@ -97,17 +97,6 @@ void handle_get_request(int client_fd, const char* request) {
         printf("%02X ", (unsigned char)response[i]);
     }
     }
-    // char header_response[RESPONSE_SIZE];
-    // strcpy(header_response, response);
-    // size_t bytes_read;
-    // while ((bytes_read = fread(buffer, sizeof(char), LOCAL_BUFFER_SIZE, file)) > 0) {
-    //     // send(client_fd, buffer, bytes_read, 0);
-    //     // add the header files before sending the response each time
-    //     strcpy(response, header_response);
-    //     strcat(response, buffer);
-    //     printf("In while sending response = %s\n", response);
-    //     send(client_fd, response, strlen(response), 0);
-    // }
     
     fclose(file);
 }
