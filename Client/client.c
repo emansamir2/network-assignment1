@@ -13,7 +13,15 @@
 // #define LOCALHOST "/home/eman/Documents/network-assignment1"
 #define LOCALHOST "/home/maria/Documents/Networks/network-assignment1"
 
-
+/****************************************************
+ * Function: extract_filename
+ * --------------------------------------------------
+ * Extracts the filename from a given file path.
+ *
+ * Parameters:
+ * - file_path: The input file path.
+ * - filename: Output parameter to store the extracted filename.
+ ****************************************************/
 void extract_filename(const char *file_path, char *filename) {
     const char *last_slash = strrchr(file_path, '/');
     
@@ -27,6 +35,16 @@ void extract_filename(const char *file_path, char *filename) {
     }
 }
 
+/****************************************************
+ * Function: start_connection
+ * --------------------------------------------------
+ * Initiates a connection to the specified host and port.
+ *
+ * Parameters:
+ * - client_fd: The client socket file descriptor.
+ * - host_name: The hostname or IP address to connect to.
+ * - port_number: The port number to connect to.
+ ****************************************************/
 void start_connection(int client_fd,char host_name [],char port_number []){
 
     struct hostent *server = gethostbyname(host_name);
@@ -51,6 +69,17 @@ void start_connection(int client_fd,char host_name [],char port_number []){
     }
 }
 
+/****************************************************
+ * Function: client_get
+ * --------------------------------------------------
+ * Handles the client GET command.
+ *
+ * Parameters:
+ * - client_fd: The client socket file descriptor.
+ * - file_path: The file path on the server.
+ * - host_name: The hostname or IP address of the server.
+ * - port_number: The port number of the server.
+ ****************************************************/
 void client_get(int client_fd, char file_path[],char host_name [],char port_number []){
     
     char request[BUFFER_SIZE];
@@ -93,6 +122,17 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
 
 }
 
+/****************************************************
+ * Function: client_post
+ * --------------------------------------------------
+ * Handles the client POST command.
+ *
+ * Parameters:
+ * - client_fd: The client socket file descriptor.
+ * - file_path: The local file path to be sent to the server.
+ * - host_name: The hostname or IP address of the server.
+ * - port_number: The port number of the server.
+ ****************************************************/
 void client_post(int client_fd, char file_path[],char host_name [],char port_number []){
     printf("I am in client post\n");
     char request[BUFFER_SIZE];
@@ -152,7 +192,18 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     }
 }
 
-
+/****************************************************
+ * Function: main
+ * --------------------------------------------------
+ * The main function of the program.
+ *
+ * Parameters:
+ * - argc: The number of command-line arguments.
+ * - argv: An array of command-line arguments.
+ *
+ * Returns:
+ * - int: The exit status of the program.
+ ****************************************************/
 int main( int argc, char *argv[] ) {
 
     if (argc != 3) {
@@ -185,7 +236,6 @@ int main( int argc, char *argv[] ) {
     start_connection(client_fd,server_ip,port_n);
 
     while (fscanf(input_file, "%s %s %s %s", command, file_path, host_name, port_number) == 4) {
-        //TODO: check if the connection is open
         if (strcmp(command, "client_get") == 0) {
             // Handle GET command
             // file_path --> in the server

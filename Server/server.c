@@ -13,25 +13,40 @@
 #define PORT 8888 //not used now 
 #define BUFFER_SIZE 1000000  
 #define RESPONSE_SIZE 1000000 
-
 int *activeConnections;  // Global variable to track the number of active connections
 
+/****************************************************
+ * Function: incrementConnections
+ * --------------------------------------------------
+ * Increments the global variable activeConnections atomically.
+ ****************************************************/
 void incrementConnections() {
     // Ensure atomic increment
     __sync_add_and_fetch(activeConnections, 1);
 }
 
+/****************************************************
+ * Function: decrementConnections
+ * --------------------------------------------------
+ * Decrements the global variable activeConnections atomically.
+ ****************************************************/
 void decrementConnections() {
     // Ensure atomic decrement
     __sync_sub_and_fetch(activeConnections, 1);
 }
 
-
+/****************************************************
+ * Function: handle_get_request
+ * --------------------------------------------------
+ * Handles the processing of a GET request from the client.
+ *
+ * Parameters:
+ * - client_fd: The client socket file descriptor.
+ * - request: The received request from the client.
+ ****************************************************/
 void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
     char file_path[256];
-    // TODO: img - txt - html
-
     sscanf(request, "GET %s HTTP/1.1\r\n", file_path);
     printf("-------------------------------------------------------------\n");
     printf("I am in handle_get_request and the file path is %s\n", file_path);
@@ -101,12 +116,19 @@ void handle_get_request(int client_fd, const char* request) {
     fclose(file);
 }
 
-
+/****************************************************
+ * Function: handle_post_request
+ * --------------------------------------------------
+ * Handles the processing of a POST request from the client.
+ *
+ * Parameters:
+ * - client_fd: The client socket file descriptor.
+ * - request: The received request from the client.
+ * - bytesRead: The number of bytes read from the client.
+ ****************************************************/
 void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) {
     // Extract the requested file path from the request
     char file_path[256];
-
-    // TODO: img - txt - html
     sscanf(request, "POST %s HTTP/1.1\r\n", file_path);
     printf("-------------------------------------------------------------\n");
     printf("I am in handle_post_request and the file path is %s\n", file_path);
@@ -161,7 +183,18 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     send(client_fd, response, strlen(response), 0);
 }
 
-
+/****************************************************
+ * Function: main
+ * --------------------------------------------------
+ * The main function of the server program.
+ *
+ * Parameters:
+ * - argc: The number of command-line arguments.
+ * - argv: An array of command-line arguments.
+ *
+ * Returns:
+ * - int: The exit status of the program.
+ ****************************************************/
 int main( int argc, char *argv[] ) {
 
     if (argc != 2) {
