@@ -10,7 +10,7 @@
 
 #define BUFFER_SIZE 1000000  
 #define RESPONSE_SIZE 1000000
-// #define LOCALHOST "/home/eman/Documents/network-assignment1"
+//#define LOCALHOST "/home/eman/Documents/network-assignment1"
 #define LOCALHOST "/home/maria/Documents/Networks/network-assignment1"
 
 /****************************************************
@@ -86,14 +86,17 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
     snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\n", file_path);
     ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
     strcat(request,"\r\n");
-    if(sent_Bytes<0){
+    if(sent_Bytes<=0){
         perror("ERROR while sending to socket");
-        return;
+        exit(0);
     }
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
     bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-
+    if(bytes_received<=0){
+        perror("ERROR while receiving to socket");
+        exit(0);
+    }
     printf("%s\n\n", buffer);
 
     // Create a file using the file path as the name
@@ -166,17 +169,17 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     }
     ssize_t sent_Bytes= send(client_fd, request, requestLength + bytesRead, 0);
     printf("sent bytes %zu\n",sent_Bytes);
-    if(sent_Bytes<=0){
+    if(sent_Bytes<= 0){
         perror("ERROR while sending to socket");
-        return;
+        exit(0);
     }
 
     char response[RESPONSE_SIZE];
     ssize_t bytes_received = recv(client_fd, response, sizeof(buffer) - 1, 0);
     printf("recived bytes %zu \n",bytes_received);
-    if(bytes_received<0){
+    if(bytes_received<=0){
         perror("ERROR while receiving to socket");
-        return;
+        exit(0);
     }
     response[bytes_received] = '\0';
 
@@ -211,8 +214,8 @@ int main( int argc, char *argv[] ) {
         return EXIT_FAILURE;
     }
 
-    char *server_ip = "10.0.2.15";
-    char *port_n = "8888";
+    char *server_ip = argv[1];
+    char *port_n = argv[2];
 
     FILE *input_file = fopen("commands.txt", "r"); // Open the input file
 
