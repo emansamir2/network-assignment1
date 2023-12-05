@@ -102,7 +102,7 @@ void handle_get_request(int client_fd, const char* request) {
 
         // Send the updated response to the client
         ssize_t sent_Bytes= send(client_fd, response, response_length, 0);
-        printf("response: %s", response);
+        printf("response: %s\n", response);
     }
     
     fclose(file);
@@ -169,7 +169,7 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     }
 
     strcat(response, "\r\n");
-    printf("response: %s", response);
+    printf("response: %s\n", response);
 
     // Send the response
     send(client_fd, response, strlen(response), 0);

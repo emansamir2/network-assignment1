@@ -84,8 +84,8 @@ void client_get(int client_fd, char file_path[],char host_name [],char port_numb
     
     char request[BUFFER_SIZE];
     snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\n", file_path);
-    ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
     strcat(request,"\r\n");
+    ssize_t sent_Bytes= send(client_fd, request, strlen(request), 0);
     if(sent_Bytes<=0){
         perror("ERROR while sending to socket");
         exit(0);
