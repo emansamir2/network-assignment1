@@ -157,7 +157,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
     // Write the received data to the file
     memset(buffer,'\0',BUFFER_SIZE);
     size_t bytesRead = fread(buffer, 1, BUFFER_SIZE, file);
-    printf("bytesRead fread  %zu\n",bytesRead);
+    // printf("bytesRead fread  %zu\n",bytesRead);
     
     printf("\n");
     // Close the file
@@ -168,7 +168,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
         printf("%02X ", (unsigned char)request[i]);
     }
     ssize_t sent_Bytes= send(client_fd, request, requestLength + bytesRead, 0);
-    printf("sent bytes %zu\n",sent_Bytes);
+    // printf("sent bytes %zu\n",sent_Bytes);
     if(sent_Bytes<= 0){
         perror("ERROR while sending to socket");
         exit(0);
@@ -176,7 +176,7 @@ void client_post(int client_fd, char file_path[],char host_name [],char port_num
 
     char response[RESPONSE_SIZE];
     ssize_t bytes_received = recv(client_fd, response, sizeof(buffer) - 1, 0);
-    printf("recived bytes %zu \n",bytes_received);
+    // printf("recived bytes %zu \n",bytes_received);
     if(bytes_received<=0){
         perror("ERROR while receiving to socket");
         exit(0);

@@ -48,13 +48,13 @@ void handle_get_request(int client_fd, const char* request) {
     // Extract the requested file path from the request
     char file_path[256];
     sscanf(request, "GET %s HTTP/1.1\r\n", file_path);
-    printf("-------------------------------------------------------------\n");
-    printf("I am in handle_get_request and the file path is %s\n", file_path);
+    // printf("-------------------------------------------------------------\n");
+    // printf("I am in handle_get_request and the file path is %s\n", file_path);
 
     // Open the requested file
     FILE* file = fopen(file_path, "rb");
     if (file == NULL) {
-        // If the file is not found, send a 404 Not Found response
+        // If the file is not found in server, send a 404 Not Found response
         char response[RESPONSE_SIZE];
         snprintf(response, RESPONSE_SIZE, "HTTP/1.1 404 Not Found\r\n");
         send(client_fd, response, strlen(response), 0);
@@ -64,10 +64,10 @@ void handle_get_request(int client_fd, const char* request) {
 
     // Send the file content as the response
     char response[RESPONSE_SIZE];
-    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n"); // \n
+    snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n");
        
     // Process optional headers (skip the request line and the mandatory Host header)
-    const char *headers_start = strstr(request, "\r\n") + 2; /// Move to the start of headers
+    const char *headers_start = strstr(request, "\r\n") + 2; // Move to the start of headers
     char headers_copy[BUFFER_SIZE];
     strncpy(headers_copy, headers_start, sizeof(headers_copy));
     headers_copy[sizeof(headers_copy) - 1] = '\0';
@@ -80,16 +80,11 @@ void handle_get_request(int client_fd, const char* request) {
         sscanf(header_line, "%511[^\r\n]\r\n", header);
         strcat(response, header);
         strcat(response, "\r\n");
-        printf("In header while\n");
-        printf("header = %s\n", header);
-        printf("response = %s\n", response);
         header_line = strtok(NULL, "\r\n");
-        printf("header_line = %s\n", header_line);
     }
 
     // End the headers
     strcat(response, "\r\n");
-    printf("Response now = %s", response);
     size_t final_response_size = strlen(response);
     // Send the file content in chunks
     size_t LOCAL_BUFFER_SIZE = RESPONSE_SIZE - final_response_size;
@@ -107,10 +102,7 @@ void handle_get_request(int client_fd, const char* request) {
 
         // Send the updated response to the client
         ssize_t sent_Bytes= send(client_fd, response, response_length, 0);
-        // printf("sent bytes %zu\n",sent_Bytes);
-        for (size_t i = 0; i < sent_Bytes; ++i) {
-            printf("%02X ", (unsigned char)response[i]);
-        }
+        printf("response: %s", response);
     }
     
     fclose(file);
@@ -130,8 +122,8 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     // Extract the requested file path from the request
     char file_path[256];
     sscanf(request, "POST %s HTTP/1.1\r\n", file_path);
-    printf("-------------------------------------------------------------\n");
-    printf("I am in handle_post_request and the file path is %s\n", file_path);
+    // printf("-------------------------------------------------------------\n");
+    // printf("I am in handle_post_request and the file path is %s\n", file_path);
 
     // Extract the data from the request body
     const char* body_start = strstr(request, "\r\n\r\n");
@@ -143,9 +135,9 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     }
 
     const char* data = body_start + 4;  // Skip the "\r\n\r\n"
-    printf("Received POST data: %s\n", data);
+    // printf("Received POST data: %s\n", data);
 
-    FILE *file = fopen(file_path, "wb");//
+    FILE *file = fopen(file_path, "wb");
     if (file == NULL) {
         // If the file is not found, send a 404 Not Found response
         char response[RESPONSE_SIZE];
@@ -164,7 +156,7 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     snprintf(response, RESPONSE_SIZE, "HTTP/1.1 200 OK\r\n");
 
     const char* header_start = request + strlen("POST") + strlen(file_path) + strlen("HTTP/1.1\r\n") + 2; // Move past the first \r\n after the request line
-    while (strncmp(header_start, "\r\n", 2) != 0) {//not \r\n
+    while (strncmp(header_start, "\r\n", 2) != 0) {
         // Extract and process each header line
         char header[512];
         sscanf(header_start, "%511[^\r\n]\r\n", header);
@@ -177,7 +169,7 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     }
 
     strcat(response, "\r\n");
-    printf("response: %s\n", response);
+    printf("response: %s", response);
 
     // Send the response
     send(client_fd, response, strlen(response), 0);
@@ -202,7 +194,7 @@ int main( int argc, char *argv[] ) {
         return EXIT_FAILURE;
     }
 
-    char *port_number= argv[1];//"8888"
+    char *port_number= argv[1]; //"8888"
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if( server_fd == 0)   
@@ -238,7 +230,7 @@ int main( int argc, char *argv[] ) {
     int shm_fd;
     void *shm_ptr;
 
-    // Create shared memory
+    // Create shared memory for number of activeConnections
     shm_fd = shm_open("/activeConnections", O_CREAT | O_RDWR, 0666);
     ftruncate(shm_fd, sizeof(int));
     shm_ptr = mmap(0, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
@@ -299,7 +291,7 @@ int main( int argc, char *argv[] ) {
                     //buffer[bytesRead] = '\0';  
                     printf("\n==============================================\n");
                     printf("Process %d: \n", getpid());
-                    printf("Received %s. Processing... \n", buffer);
+                    printf("Received: %s\nProcessing... \n", buffer);
                     fflush(stdout);
                     memset(response, '\0', RESPONSE_SIZE);
                     // Check if it's a GET or POST request
