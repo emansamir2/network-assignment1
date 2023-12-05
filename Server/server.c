@@ -89,7 +89,7 @@ void handle_get_request(int client_fd, const char* request) {
 
     // End the headers
     strcat(response, "\r\n");
-    printf("Response now = %s\n", response);
+    printf("Response now = %s", response);
     size_t final_response_size = strlen(response);
     // Send the file content in chunks
     size_t LOCAL_BUFFER_SIZE = RESPONSE_SIZE - final_response_size;
@@ -107,10 +107,10 @@ void handle_get_request(int client_fd, const char* request) {
 
         // Send the updated response to the client
         ssize_t sent_Bytes= send(client_fd, response, response_length, 0);
-        printf("sent bytes %zu\n",sent_Bytes);
+        // printf("sent bytes %zu\n",sent_Bytes);
         for (size_t i = 0; i < sent_Bytes; ++i) {
-        printf("%02X ", (unsigned char)response[i]);
-    }
+            printf("%02X ", (unsigned char)response[i]);
+        }
     }
     
     fclose(file);
@@ -177,7 +177,7 @@ void handle_post_request(int client_fd, const char* request, ssize_t bytesRead) 
     }
 
     strcat(response, "\r\n");
-    printf("\nresponse: %s\n", response);
+    printf("response: %s\n", response);
 
     // Send the response
     send(client_fd, response, strlen(response), 0);
@@ -264,6 +264,7 @@ int main( int argc, char *argv[] ) {
                 printf("Error! Can't accept\n");
                 decrementConnections();
                 printf("Number of active connections: %d\n", *activeConnections);
+                printf("===============================================\n\n");
                 exit(0);
             }
 
@@ -277,11 +278,9 @@ int main( int argc, char *argv[] ) {
             while (1) {
                 ssize_t bytesRead = recv(client_fd, buffer, BUFFER_SIZE,0);
                 
-                // printf("buffer= %s\n",buffer);
-                //to be changed
                 if (strcmp(buffer ,"close\r\n") == 0) {
                     printf("Process %d: \n", getpid());
-                    //close(client_fd);
+
                     printf("Closing session with %d. Bye!\n", client_fd);
                     break;
                 }
@@ -291,16 +290,14 @@ int main( int argc, char *argv[] ) {
 
                     if (dif > 30.0 / *activeConnections) {
                         printf("Process %d: \n", getpid());
-                        //close(client_fd);
                         printf("Connection timed out after %.3lf seconds. \n", dif);
                         printf("Closing session with %d. Bye!\n", client_fd);
                         break;
                     }
-
                 }
                 else {
                     //buffer[bytesRead] = '\0';  
-
+                    printf("\n==============================================\n");
                     printf("Process %d: \n", getpid());
                     printf("Received %s. Processing... \n", buffer);
                     fflush(stdout);
@@ -310,7 +307,7 @@ int main( int argc, char *argv[] ) {
                         handle_get_request(client_fd, buffer);
                     }
                     else if (strncmp(buffer, "POST", 4) == 0) {
-                        printf("hereeeeeeeee bytesRead %zu\n\n",bytesRead);
+                        // printf("\nbytesRead %zu\n\n",bytesRead);
                         handle_post_request(client_fd, buffer,bytesRead);
                     }
                     else {
